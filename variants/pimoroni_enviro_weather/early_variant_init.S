@@ -1,3 +1,5 @@
+#ifdef PIMORONI_ENVIRO_WEATHER
+
 #include "hardware/regs/rosc.h"
 #include "hardware/regs/pads_bank0.h"
 #include "hardware/regs/io_bank0.h"
@@ -65,3 +67,5 @@ sio_reset_loop:
 
 
     bx lr
+
+#endif
