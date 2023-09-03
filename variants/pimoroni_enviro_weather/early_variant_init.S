@@ -1,4 +1,4 @@
-#ifdef PIMORONI_ENVIRO_WEATHER
+#ifdef ARDUINO_PIMORONI_ENVIRO_WEATHER
 
 #include "hardware/regs/rosc.h"
 #include "hardware/regs/pads_bank0.h"
