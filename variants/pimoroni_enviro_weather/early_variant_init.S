@@ -1,13 +1,22 @@
 #ifdef ARDUINO_PIMORONI_ENVIRO_WEATHER
 
-#include "hardware/regs/rosc.h"
-#include "hardware/regs/pads_bank0.h"
+#include "hardware/platform_defs.h"
+
+#include "hardware/regs/addressmap.h"
 #include "hardware/regs/io_bank0.h"
+#include "hardware/regs/pads_bank0.h"
 #include "hardware/regs/psm.h"
 #include "hardware/regs/resets.h"
+#include "hardware/regs/rosc.h"
+#include "hardware/regs/sio.h"
+
+.syntax unified
+.cpu cortex-m0plus
+.thumb
 
 .type early_variant_init,%function
 .thumb_func
+.global early_variant_init
 early_variant_init:
     // Increase ROSC frequency to ~48MHz (range 14.4 - 96)
     // Startup drops from ~160ms to ~32ms on Pico W MicroPython
