@@ -11,12 +11,18 @@
 #include "hardware/regs/sio.h"
 
 #include "enviro_vars.h"
-.extern enviro_boot_reason_flags
 
 .syntax unified
 .cpu cortex-m0plus
 .thumb
 
+.data
+.global enviro_boot_reason_flags
+enviro_boot_reason_flags:
+    .word 0
+
+
+.text
 #define IO_FUNCTION_SIO 0x05
 
 .type early_variant_init,%function
@@ -103,7 +109,7 @@ sio_reset_loop:  // Wait for SIO reset to complete
 
     ldr r0, =(SIO_BASE + SIO_GPIO_IN_OFFSET)
     ldr r1, [r0]
-    ldr r3, =0
+    ldr r3, =0x80
 
     ldr r4, =(~(1<<ENVIRO_BOOT_REASON_RAIN_PIN))
     mov r2, r1
