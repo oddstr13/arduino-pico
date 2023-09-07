@@ -10,9 +10,14 @@
 #include "hardware/regs/rosc.h"
 #include "hardware/regs/sio.h"
 
+#include "enviro_vars.h"
+.extern enviro_boot_reason_flags
+
 .syntax unified
 .cpu cortex-m0plus
 .thumb
+
+#define IO_FUNCTION_SIO 0x05
 
 .type early_variant_init,%function
 .thumb_func
@@ -30,7 +35,7 @@ early_variant_init:
     ldr r1, =(PSM_FRCE_ON_SIO_BITS)
     str r1, [r0]
     ldr r0, =(PSM_BASE + PSM_DONE_OFFSET)
-sio_power_loop:
+sio_power_loop: // Wait for SIO to be powered on
     ldr r2, [r0]
     ands r2, r2, r1
     cmp r1, r2
@@ -44,13 +49,13 @@ sio_power_loop:
     bics r2, r2, r1
     str r2, [r0]
     ldr r0, =(RESETS_BASE + RESETS_RESET_DONE_OFFSET)
-sio_reset_loop:
+sio_reset_loop:  // Wait for SIO reset to complete
     ldr r2, [r0]
     ands r2, r2, r1
     cmp r1, r2
     bne sio_reset_loop
 
-
+    // #### Assert HOLD_VSYS_EN (GPIO2) to keep system powered on
     // gpio_init(2)
     ldr r0, =(PADS_BANK0_BASE + PADS_BANK0_GPIO2_OFFSET)
     ldr r1, [r0]
@@ -61,7 +66,7 @@ sio_reset_loop:
     str r1, [r0]
 
     ldr r0, =(IO_BANK0_BASE + IO_BANK0_GPIO2_CTRL_OFFSET)
-    ldr r1, =(0x05) // SIO
+    ldr r1, =(IO_FUNCTION_SIO)
     str r1, [r0]
 
     // pinMode(2, OUTPUT)
@@ -74,6 +79,52 @@ sio_reset_loop:
     ldr r1, =(1<<2) // Pin 2
     str r1, [r0]
 
+    // #### Read wake pins to determine reason(s) for waking up
+    // gpio_init(10)
+    ldr r0, =(PADS_BANK0_BASE + PADS_BANK0_GPIO10_OFFSET)
+    ldr r1, [r0]
+    ldr r2, =(PADS_BANK0_GPIO10_OD_BITS)
+    bics r1, r1, r2 // Clear output disable
+    ldr r2, =(PADS_BANK0_GPIO10_IE_BITS)
+    orrs r1, r1, r2
+    str r1, [r0]
+
+    ldr r0, =(IO_BANK0_BASE + IO_BANK0_GPIO10_CTRL_OFFSET)
+    ldr r1, =(IO_FUNCTION_SIO)
+    str r1, [r0]
+
+    ldr r0, =(IO_BANK0_BASE + IO_BANK0_GPIO7_CTRL_OFFSET)
+    ldr r1, =(IO_FUNCTION_SIO)
+    str r1, [r0]
+
+    ldr r0, =(IO_BANK0_BASE + IO_BANK0_GPIO8_CTRL_OFFSET)
+    ldr r1, =(IO_FUNCTION_SIO)
+    str r1, [r0]
+
+    ldr r0, =(SIO_BASE + SIO_GPIO_IN_OFFSET)
+    ldr r1, [r0]
+    ldr r3, =0
+
+    ldr r4, =(~(1<<ENVIRO_BOOT_REASON_RAIN_PIN))
+    mov r2, r1
+    bics r2, r2, r4
+    lsrs r2, (ENVIRO_BOOT_REASON_RAIN_PIN - ENVIRO_BOOT_REASON_RAIN_OFFSET)
+    orrs r3, r3, r2
+
+    ldr r4, =(~(1<<ENVIRO_BOOT_REASON_BUTTON_PIN))
+    mov r2, r1
+    bics r2, r2, r4
+    lsrs r2, (ENVIRO_BOOT_REASON_BUTTON_PIN - ENVIRO_BOOT_REASON_BUTTON_OFFSET)
+    orrs r3, r3, r2
+
+    ldr r4, =(~(1<<ENVIRO_BOOT_REASON_RTC_PIN))
+    mov r2, r1
+    bics r2, r2, r4
+    lsrs r2, (ENVIRO_BOOT_REASON_RTC_PIN - ENVIRO_BOOT_REASON_RTC_OFFSET)
+    orrs r3, r3, r2
+
+    ldr r0, =enviro_boot_reason_flags
+    str r3, [r0]
 
     bx lr
 
