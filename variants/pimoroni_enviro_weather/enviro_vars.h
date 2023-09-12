@@ -21,7 +21,7 @@ extern "C" {
 #endif
 
 
-extern uint32_t enviro_boot_reason_flags;
+uint32_t enviro_vars_get_boot_reason_flags();
 
 
 #ifdef __cplusplus

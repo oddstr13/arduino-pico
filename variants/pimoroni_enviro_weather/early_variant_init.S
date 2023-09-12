@@ -9,6 +9,7 @@
 #include "hardware/regs/resets.h"
 #include "hardware/regs/rosc.h"
 #include "hardware/regs/sio.h"
+#include "hardware/regs/watchdog.h"
 
 #include "enviro_vars.h"
 
@@ -16,10 +17,10 @@
 .cpu cortex-m0plus
 .thumb
 
-.data
-.global enviro_boot_reason_flags
-enviro_boot_reason_flags:
-    .word 0
+//.data
+//.global enviro_boot_reason_flags
+//enviro_boot_reason_flags:
+//    .word 0
 
 
 .text
@@ -109,28 +110,43 @@ sio_reset_loop:  // Wait for SIO reset to complete
 
     ldr r0, =(SIO_BASE + SIO_GPIO_IN_OFFSET)
     ldr r1, [r0]
-    ldr r3, =0x80
 
-    ldr r4, =(~(1<<ENVIRO_BOOT_REASON_RAIN_PIN))
+    ldr r3, =0x00000000 // enviro_boot_reason_flags
+
+    ldr r0, =(~(1<<ENVIRO_BOOT_REASON_RAIN_PIN))
     mov r2, r1
-    bics r2, r2, r4
+    bics r2, r2, r0
     lsrs r2, (ENVIRO_BOOT_REASON_RAIN_PIN - ENVIRO_BOOT_REASON_RAIN_OFFSET)
     orrs r3, r3, r2
 
-    ldr r4, =(~(1<<ENVIRO_BOOT_REASON_BUTTON_PIN))
+    ldr r0, =(~(1<<ENVIRO_BOOT_REASON_BUTTON_PIN))
     mov r2, r1
-    bics r2, r2, r4
+    bics r2, r2, r0
     lsrs r2, (ENVIRO_BOOT_REASON_BUTTON_PIN - ENVIRO_BOOT_REASON_BUTTON_OFFSET)
     orrs r3, r3, r2
 
-    ldr r4, =(~(1<<ENVIRO_BOOT_REASON_RTC_PIN))
+    ldr r0, =(~(1<<ENVIRO_BOOT_REASON_RTC_PIN))
     mov r2, r1
-    bics r2, r2, r4
+    bics r2, r2, r0
     lsrs r2, (ENVIRO_BOOT_REASON_RTC_PIN - ENVIRO_BOOT_REASON_RTC_OFFSET)
     orrs r3, r3, r2
 
-    ldr r0, =enviro_boot_reason_flags
-    str r3, [r0]
+    // Does not work for whatever reason - variable gets reset to it's initial value
+    // at some point between now and ESPHome application code.
+    //ldr r0, =enviro_boot_reason_flags
+    //str r3, [r0]
+
+
+    // Store boot reason flags in watchdog scratch registry for later retrival
+    ldr r0, =WATCHDOG_BASE
+    str r3, [r0, WATCHDOG_SCRATCH0_OFFSET]
+
+    // Make sure watchdog doesn't kick in during breakpoint handling
+    ldr r1, [r0, WATCHDOG_CTRL_OFFSET]
+    ldr r2, =(WATCHDOG_CTRL_PAUSE_DBG1_BITS | WATCHDOG_CTRL_PAUSE_DBG0_BITS | WATCHDOG_CTRL_PAUSE_JTAG_BITS)
+    orrs r1, r2
+    str r1, [r0, WATCHDOG_CTRL_OFFSET]
+
 
     bx lr
 
